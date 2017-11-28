@@ -5,6 +5,7 @@ import re
 from requests import cookies, utils
 
 from . import _digest_auth_compat as auth
+from .._compat import urlparse
 
 
 class HTTPProxyDigestAuth(auth.HTTPDigestAuth):
@@ -82,8 +83,13 @@ class HTTPProxyDigestAuth(auth.HTTPDigestAuth):
             cookies.extract_cookies_to_jar(prep._cookies, r.request, r.raw)
             prep.prepare_cookies(prep._cookies)
 
-            prep.headers['Proxy-Authorization'] = self.build_digest_header(
-                prep.method, prep.url)
+            p_parsed = urlparse(prep.url)
+            if p_parsed.scheme == 'https':
+                proxy_manager = r.connection.proxy_manager_for(kwargs['proxies']['https'])
+                proxy_manager.proxy_headers['Proxy-Authorization'] = self.build_digest_header('CONNECT', p_parsed.netloc + '' if ':' in p_parsed.netloc else ':443')
+            else:
+                prep.headers['Proxy-Authorization'] = self.build_digest_header(prep.method, prep.url)
+
             _r = r.connection.send(prep, **kwargs)
             _r.history.append(r)
             _r.request = prep
@@ -96,6 +102,7 @@ class HTTPProxyDigestAuth(auth.HTTPDigestAuth):
         self.init_per_thread_state()
         # if we have nonce, then just use it, otherwise server will tell us
         if self.last_nonce:
+            # FIXME: reuse nonce for CONNECT requests
             r.headers['Proxy-Authorization'] = self.build_digest_header(
                 r.method, r.url
             )

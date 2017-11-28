@@ -54,11 +54,11 @@ PY3 = sys.version_info > (3, 0)
 
 if PY3:
     import queue
-    from urllib.parse import urlencode, urljoin
+    from urllib.parse import urlencode, urljoin, urlparse
 else:
     import Queue as queue
     from urllib import urlencode
-    from urlparse import urljoin
+    from urlparse import urljoin, urlparse
 
 try:
     basestring = basestring
